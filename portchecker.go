@@ -158,6 +158,7 @@ func CheckPort(protocol string, port uint16, configs ...*Config) (bool, error, e
 			return false, err, nil
 		}
 		listener.SetDeadline(deadline)
+		defer listener.Close()
 
 		go func() {
 			conn, err := listener.AcceptTCP()
@@ -173,6 +174,7 @@ func CheckPort(protocol string, port uint16, configs ...*Config) (bool, error, e
 		if err != nil {
 			return false, err, nil
 		}
+		defer conn.Close()
 
 		go func() {
 			errChan <- handleConn(conn, nonceSent, deadline)
