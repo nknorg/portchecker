@@ -16,7 +16,7 @@ import (
 const (
 	NonceBytes        = 32
 	DefaultServerAddr = ""
-	DefaultTimeout    = 30 * time.Second
+	DefaultTimeout    = 10 * time.Second
 )
 
 type Config struct {
