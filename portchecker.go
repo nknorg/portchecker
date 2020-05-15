@@ -40,6 +40,10 @@ type checkError struct {
 	error  error
 }
 
+func (ce *checkError) isEmpty() bool {
+	return ce.reason == nil && ce.error == nil
+}
+
 type tcpConn net.TCPConn
 
 func (conn *tcpConn) ReadFrom(b []byte) (int, net.Addr, error) {
@@ -161,13 +165,18 @@ func CheckPort(protocol string, port uint16, configs ...*Config) (bool, error, e
 		defer listener.Close()
 
 		go func() {
-			conn, err := listener.AcceptTCP()
-			if err != nil {
-				errChan <- &checkError{err, nil}
-				return
-			}
+			for {
+				conn, err := listener.AcceptTCP()
+				if err != nil {
+					errChan <- &checkError{err, nil}
+					return
+				}
 
-			errChan <- handleConn((*tcpConn)(conn), nonceSent, deadline)
+				ce := handleConn((*tcpConn)(conn), nonceSent, deadline)
+				if ce.isEmpty() {
+					errChan <- ce
+				}
+			}
 		}()
 	case "udp":
 		conn, err := net.ListenUDP("udp", &net.UDPAddr{Port: int(port)})
@@ -189,7 +198,7 @@ func CheckPort(protocol string, port uint16, configs ...*Config) (bool, error, e
 
 	for i := 0; i < 2; i++ {
 		ce := <-errChan
-		if ce.reason != nil || ce.error != nil {
+		if !ce.isEmpty() {
 			return false, ce.reason, ce.error
 		}
 	}
